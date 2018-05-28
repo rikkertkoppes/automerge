@@ -1,4 +1,5 @@
 const { List, fromJS } = require('immutable')
+const { propNames } = require('./prop_names')
 const OpSet = require('./op_set')
 
 function listImmutable(attempt) {
@@ -97,10 +98,10 @@ const MapHandler = {
     if (!context.state.hasIn(['opSet', 'byObject', objectId])) throw 'Target object does not exist: ' + objectId
     if (key === '_inspect') return JSON.parse(JSON.stringify(mapProxy(context, objectId)))
     if (key === '_type') return 'map'
-    if (key === '_objectId') return objectId
-    if (key === '_state') return context.state
-    if (key === '_actorId') return context.state.get('actorId')
-    if (key === '_conflicts') return OpSet.getObjectConflicts(context.state.get('opSet'), objectId, context).toJS()
+    if (key === propNames._OBJECT_ID) return objectId
+    if (key === propNames._STATE) return context.state
+    if (key === propNames._ACTOR_ID) return context.state.get('actorId')
+    if (key === propNames._CONFLICTS) return OpSet.getObjectConflicts(context.state.get('opSet'), objectId, context).toJS()
     if (key === '_change') return context
     return OpSet.getObjectField(context.state.get('opSet'), objectId, key, context)
   },
@@ -128,7 +129,7 @@ const MapHandler = {
   },
 
   has (target, key) {
-    return ['_type', '_state', '_actorId', '_objectId', '_conflicts'].includes(key) ||
+    return ['_type', propNames._STATE, propNames._ACTOR_ID, propNames._OBJECT_ID, propNames._CONFLICTS].includes(key) ||
       OpSet.getObjectFields(target.context.state.get('opSet'), target.objectId).has(key)
   },
 
@@ -150,9 +151,9 @@ const ListHandler = {
     if (key === Symbol.iterator) return () => OpSet.listIterator(context.state.get('opSet'), objectId, 'values', context)
     if (key === '_inspect') return JSON.parse(JSON.stringify(listProxy(context, objectId)))
     if (key === '_type') return 'list'
-    if (key === '_objectId') return objectId
-    if (key === '_state') return context.state
-    if (key === '_actorId') return context.state.get('actorId')
+    if (key === propNames._OBJECT_ID) return objectId
+    if (key === propNames._STATE) return context.state
+    if (key === propNames._ACTOR_ID) return context.state.get('actorId')
     if (key === '_change') return context
     if (key === 'length') return OpSet.listLength(context.state.get('opSet'), objectId)
     if (typeof key === 'string' && /^[0-9]+$/.test(key)) {
@@ -187,14 +188,14 @@ const ListHandler = {
     if (typeof key === 'string' && /^[0-9]+$/.test(key)) {
       return parseInt(key) < OpSet.listLength(context.state.get('opSet'), objectId)
     }
-    return (key === 'length') || (key === '_type') || (key === '_objectId') ||
-      (key === '_state') || (key === '_actorId')
+    return (key === 'length') || (key === '_type') || (key === propNames._OBJECT_ID) ||
+      (key === propNames._STATE) || (key === propNames._ACTOR_ID)
   },
 
   getOwnPropertyDescriptor (target, key) {
     const [context, objectId] = target
     if (key === 'length') return {}
-    if (key === '_objectId' || (typeof key === 'string' && /^[0-9]+$/.test(key))) {
+    if (key === propNames._OBJECT_ID || (typeof key === 'string' && /^[0-9]+$/.test(key))) {
       if (parseInt(key) < OpSet.listLength(context.state.get('opSet'), objectId)) {
         return {configurable: true, enumerable: true}
       }
@@ -204,7 +205,7 @@ const ListHandler = {
   ownKeys (target) {
     const [context, objectId] = target
     const length = OpSet.listLength(context.state.get('opSet'), objectId)
-    let keys = ['length', '_objectId']
+    let keys = ['length', propNames._OBJECT_ID]
     for (let i = 0; i < length; i++) keys.push(i.toString())
     return keys
   }

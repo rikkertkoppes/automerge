@@ -1,4 +1,5 @@
 const { Map, List, fromJS } = require('immutable')
+const { propNames } = require('./prop_names')
 const OpSet = require('./op_set')
 const FreezeAPI = require('./freeze_api')
 const ImmutableAPI = require('./immutable_api')
@@ -13,8 +14,8 @@ function isImmutable(obj) {
 }
 
 function checkTarget(funcName, target, needMutable) {
-  if (!target || !target._state || !target._objectId ||
-      !target._state.hasIn(['opSet', 'byObject', target._objectId])) {
+  if (!target || !target[propNames._STATE] || !target[propNames._OBJECT_ID] ||
+      !target[propNames._STATE].hasIn(['opSet', 'byObject', target[propNames._OBJECT_ID]])) {
     throw new TypeError('The first argument to Automerge.' + funcName +
                         ' must be the object to modify, but you passed ' + JSON.stringify(target))
   }
@@ -42,9 +43,9 @@ function makeChange(root, newState, message) {
     }
   })
 
-  const actor = root._state.get('actorId')
-  const seq = root._state.getIn(['opSet', 'clock', actor], 0) + 1
-  const deps = root._state.getIn(['opSet', 'deps']).remove(actor)
+  const actor = root[propNames._STATE].get('actorId')
+  const seq = root[propNames._STATE].getIn(['opSet', 'clock', actor], 0) + 1
+  const deps = root[propNames._STATE].getIn(['opSet', 'deps']).remove(actor)
   const change = fromJS({actor, seq, deps, message, ops})
 
   if (isImmutable(root)) {
@@ -65,12 +66,12 @@ function applyChanges(doc, changes) {
 
 function merge(local, remote) {
   checkTarget('merge', local)
-  if (local._state.get('actorId') === remote._state.get('actorId')) {
+  if (local[propNames._STATE].get('actorId') === remote[propNames._STATE].get('actorId')) {
     throw new RangeError('Cannot merge an actor with itself')
   }
 
-  const clock = local._state.getIn(['opSet', 'clock'])
-  const changes = OpSet.getMissingChanges(remote._state.get('opSet'), clock)
+  const clock = local[propNames._STATE].getIn(['opSet', 'clock'])
+  const changes = OpSet.getMissingChanges(remote[propNames._STATE].get('opSet'), clock)
   if (isImmutable(local)) {
     return ImmutableAPI.applyChanges(local, changes, true)
   } else {

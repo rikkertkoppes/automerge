@@ -1,5 +1,6 @@
 const assert = require('assert')
 const sinon = require('sinon')
+const { propNames } = require('../src/prop_names')
 const Automerge = process.env.TEST_DIST === '1' ? require('../dist/automerge') : require('../src/automerge')
 const Connection = Automerge.Connection
 const DocSet = Automerge.DocSet
@@ -72,7 +73,7 @@ describe('Automerge.Connection', () => {
 
     execution([[1, 2]], [
       {from: 1, to: 2, drop: true, match(msg) {
-        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1._actorId]: 1}})
+        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1[propNames._ACTOR_ID]]: 1}})
       }}
     ])
   })
@@ -83,7 +84,7 @@ describe('Automerge.Connection', () => {
     execution([[1, 2]], [
       // Node 1 advertises document
       {from: 1, to: 2, deliver: true, match(msg) {
-        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1._actorId]: 1}})
+        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1[propNames._ACTOR_ID]]: 1}})
       }},
 
       // Node 2 requests document
@@ -101,7 +102,7 @@ describe('Automerge.Connection', () => {
 
       // Node 2 acknowledges receipt
       {from: 2, to: 1, deliver: true, match(msg) {
-        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1._actorId]: 1}})
+        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1[propNames._ACTOR_ID]]: 1}})
       }}
     ])
   })
@@ -114,10 +115,10 @@ describe('Automerge.Connection', () => {
     execution([[1, 2]], [
       // The two nodes concurrently and independently send an initial advertisement
       {from: 1, to: 2, match(msg) {
-        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1._actorId]: 1}})
+        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1[propNames._ACTOR_ID]]: 1}})
       }},
       {from: 2, to: 1, match(msg) {
-        assert.deepEqual(msg, {docId: 'doc2', clock: {[doc2._actorId]: 1}})
+        assert.deepEqual(msg, {docId: 'doc2', clock: {[doc2[propNames._ACTOR_ID]]: 1}})
       }},
       {from: 1, to: 2, deliver: true}, {from: 2, to: 1, deliver: true},
 
@@ -155,10 +156,10 @@ describe('Automerge.Connection', () => {
     execution([[1, 2]], [
       // Initial advertisement messages
       {from: 1, to: 2, match(msg) {
-        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1._actorId]: 1}})
+        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1[propNames._ACTOR_ID]]: 1}})
       }},
       {from: 2, to: 1, match(msg) {
-        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1._actorId]: 1, [doc2._actorId]: 1}})
+        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1[propNames._ACTOR_ID]]: 1, [doc2[propNames._ACTOR_ID]]: 1}})
       }},
       {from: 1, to: 2, deliver: true}, {from: 2, to: 1, deliver: true},
 
@@ -170,7 +171,7 @@ describe('Automerge.Connection', () => {
 
       // Node 1 acknowledges the change, and that's it
       {from: 1, to: 2, deliver: true, match(msg) {
-        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1._actorId]: 1, [doc2._actorId]: 1}})
+        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1[propNames._ACTOR_ID]]: 1, [doc2[propNames._ACTOR_ID]]: 1}})
       }}
     ])
 
@@ -188,25 +189,25 @@ describe('Automerge.Connection', () => {
     execution([[1, 2]], [
       // Node 1 sends an advertisement but node 2 doesn't (for whatever reason)
       {from: 1, to: 2, deliver: true, match(msg) {
-        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1._actorId]: 2}})
+        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1[propNames._ACTOR_ID]]: 2}})
       }},
       {from: 2, to: 1, drop: true},
 
       // Node 2 sends the change that node 1 is missing
       {from: 2, to: 1, deliver: true, match(msg) {
-        assert.deepEqual(msg.clock, {[doc1._actorId]: 1, [doc2._actorId]: 1})
+        assert.deepEqual(msg.clock, {[doc1[propNames._ACTOR_ID]]: 1, [doc2[propNames._ACTOR_ID]]: 1})
         assert.strictEqual(msg.changes.length, 1)
       }},
 
       // Node 1 acknowledges node 2's change, and sends the change that node 2 is missing
       {from: 1, to: 2, deliver: true, match(msg) {
-        assert.deepEqual(msg.clock, {[doc1._actorId]: 2, [doc2._actorId]: 1})
+        assert.deepEqual(msg.clock, {[doc1[propNames._ACTOR_ID]]: 2, [doc2[propNames._ACTOR_ID]]: 1})
         assert.strictEqual(msg.changes.length, 1)
       }},
 
       // Node 2 acknowledges node 1's change
       {from: 2, to: 1, deliver: true, match(msg) {
-        assert.deepEqual(msg.clock, {[doc1._actorId]: 2, [doc2._actorId]: 1})
+        assert.deepEqual(msg.clock, {[doc1[propNames._ACTOR_ID]]: 2, [doc2[propNames._ACTOR_ID]]: 1})
       }}
     ])
 
@@ -222,7 +223,7 @@ describe('Automerge.Connection', () => {
     execution([[1, 2], [1, 3]], [
       // Node 2 advertises the document
       {from: 2, to: 1, deliver: true, match(msg) {
-        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1._actorId]: 1}})
+        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1[propNames._ACTOR_ID]]: 1}})
       }},
 
       // Node 1 requests the document from node 2
@@ -235,7 +236,7 @@ describe('Automerge.Connection', () => {
       // Node 1 sends acknowledgement to node 2, and advertisement to node 3
       {from: 1, to: 2, deliver: true},
       {from: 1, to: 3, deliver: true, match(msg) {
-        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1._actorId]: 1}})
+        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1[propNames._ACTOR_ID]]: 1}})
       }},
 
       // Node 3 requests the document from node 1
@@ -273,17 +274,17 @@ describe('Automerge.Connection', () => {
         nodes[1].setDoc('doc1', doc1)
       },
       {from: 1, to: 2, deliver: true, match(msg) {
-        assert.deepEqual(msg.clock, {[doc1._actorId]: 2})
+        assert.deepEqual(msg.clock, {[doc1[propNames._ACTOR_ID]]: 2})
         assert.strictEqual(msg.changes.length, 1)
       }},
       {from: 1, to: 3, match(msg) {
-        assert.deepEqual(msg.clock, {[doc1._actorId]: 2})
+        assert.deepEqual(msg.clock, {[doc1[propNames._ACTOR_ID]]: 2})
         assert.strictEqual(msg.changes.length, 1)
       }},
 
       // Node 2 acknowledges to node 1, and forwards to node 3
       {from: 2, to: 1, deliver: true, match(msg) {
-        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1._actorId]: 2}})
+        assert.deepEqual(msg, {docId: 'doc1', clock: {[doc1[propNames._ACTOR_ID]]: 2}})
       }},
       {from: 2, to: 3, match(msg) {
         assert.strictEqual(msg.changes.length, 1)
@@ -295,10 +296,10 @@ describe('Automerge.Connection', () => {
 
       // Acknowledgements from node 3
       {from: 3, to: 1, deliver: true, match(msg) {
-        assert.deepEqual(msg.clock, {[doc1._actorId]: 2})
+        assert.deepEqual(msg.clock, {[doc1[propNames._ACTOR_ID]]: 2})
       }},
       {from: 3, to: 2, deliver: true, match(msg) {
-        assert.deepEqual(msg.clock, {[doc1._actorId]: 2})
+        assert.deepEqual(msg.clock, {[doc1[propNames._ACTOR_ID]]: 2})
       }}
     ])
 

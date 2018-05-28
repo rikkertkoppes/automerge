@@ -1,4 +1,5 @@
 const { Map, fromJS } = require('immutable')
+const { propNames } = require('./prop_names')
 const OpSet = require('./op_set')
 
 // Returns true if all components of clock1 are less than or equal to those of clock2.
@@ -64,10 +65,10 @@ class Connection {
 
   maybeSendChanges (docId) {
     const doc = this._docSet.getDoc(docId)
-    const clock = doc._state.getIn(['opSet', 'clock'])
+    const clock = doc[propNames._STATE].getIn(['opSet', 'clock'])
 
     if (this._theirClock.has(docId)) {
-      const changes = OpSet.getMissingChanges(doc._state.get('opSet'), this._theirClock.get(docId))
+      const changes = OpSet.getMissingChanges(doc[propNames._STATE].get('opSet'), this._theirClock.get(docId))
       if (!changes.isEmpty()) {
         this._theirClock = clockUnion(this._theirClock, docId, clock)
         this.sendMsg(docId, clock, changes)
@@ -80,7 +81,7 @@ class Connection {
 
   // Callback that is called by the docSet whenever a document is changed
   docChanged (docId, doc) {
-    const clock = doc._state.getIn(['opSet', 'clock'])
+    const clock = doc[propNames._STATE].getIn(['opSet', 'clock'])
     if (!clock) {
       throw new TypeError('This object cannot be used for network sync. ' +
                           'Are you trying to sync a snapshot from the history?')

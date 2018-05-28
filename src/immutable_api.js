@@ -1,4 +1,5 @@
 const { Map, List, Set } = require('immutable')
+const { propNames } = require('./prop_names')
 const OpSet = require('./op_set')
 const { Text } = require('./text')
 
@@ -17,7 +18,7 @@ function instantiateImmutable(opSet, objectId) {
   let obj
   if (isRoot || objType === 'makeMap') {
     const conflicts = OpSet.getObjectConflicts(opSet, objectId, this)
-    obj = Map().set('_conflicts', conflicts).set('_objectId', objectId)
+    obj = Map().set(propNames._CONFLICTS, conflicts).set(propNames._OBJECT_ID, objectId)
 
     for (let field of OpSet.getObjectFields(opSet, objectId)) {
       obj = obj.set(field, OpSet.getObjectField(opSet, objectId, field, this))
@@ -30,7 +31,7 @@ function instantiateImmutable(opSet, objectId) {
     throw 'Unknown object type: ' + objType
   }
 
-  obj._objectId = objectId
+  obj[propNames._OBJECT_ID] = objectId
   if (this.cache) this.cache[objectId] = obj
   return obj
 }
@@ -51,8 +52,8 @@ function refresh(opSet, objectId) {
 
 function updateMapObject(opSet, edit) {
   if (edit.action === 'create') {
-    const object = Map({_objectId: edit.obj})
-    object._objectId = edit.obj
+    const object = Map({[propNames._OBJECT_ID]: edit.obj})
+    object[propNames._OBJECT_ID] = edit.obj
     return opSet.setIn(['cache', edit.obj], object)
   }
 
@@ -71,26 +72,26 @@ function updateMapObject(opSet, edit) {
     object = object.withMutations(obj => {
       obj.set(edit.key, edit.link ? opSet.getIn(['cache', edit.value]) : edit.value)
       if (conflicts) {
-        obj.setIn(['_conflicts', edit.key], conflicts)
+        obj.setIn([propNames._CONFLICTS, edit.key], conflicts)
       } else {
-        obj.deleteIn(['_conflicts', edit.key])
+        obj.deleteIn([propNames._CONFLICTS, edit.key])
       }
     })
   } else if (edit.action === 'remove') {
     object = object.withMutations(obj => {
       obj.delete(edit.key)
-      obj.deleteIn(['_conflicts', edit.key])
+      obj.deleteIn([propNames._CONFLICTS, edit.key])
     })
   } else throw 'Unknown action type: ' + edit.action
 
-  object._objectId = edit.obj
+  object[propNames._OBJECT_ID] = edit.obj
   return opSet.setIn(['cache', edit.obj], object)
 }
 
 function updateListObject(opSet, edit) {
   if (edit.action === 'create') {
     const list = List()
-    list._objectId = edit.obj
+    list[propNames._OBJECT_ID] = edit.obj
     return opSet.setIn(['cache', edit.obj], list)
   }
 
@@ -105,7 +106,7 @@ function updateListObject(opSet, edit) {
     list = list.delete(edit.index)
   } else throw 'Unknown action type: ' + edit.action
 
-  list._objectId = edit.obj
+  list[propNames._OBJECT_ID] = edit.obj
   return opSet.setIn(['cache', edit.obj], list)
 }
 
@@ -136,13 +137,13 @@ function updateCache(opSet, diffs) {
 
 function init(actorId) {
   const [opSet, rootObj] = materialize(OpSet.init())
-  rootObj._state = Map({actorId, opSet})
-  rootObj._actorId = actorId
+  rootObj[propNames._STATE] = Map({actorId, opSet})
+  rootObj[propNames._ACTOR_ID] = actorId
   return rootObj
 }
 
 function applyChanges(root, changes, incremental) {
-  let opSet = root._state.get('opSet'), diffs = [], diff
+  let opSet = root[propNames._STATE].get('opSet'), diffs = [], diff
   for (let change of changes) {
     [opSet, diff] = OpSet.addChange(opSet, change)
     diffs.push(...diff)
@@ -159,9 +160,9 @@ function applyChanges(root, changes, incremental) {
   } else {
     [opSet, newRoot] = materialize(opSet)
   }
-  newRoot._state = root._state.set('opSet', opSet)
-  newRoot._actorId = root._state.get('actorId')
-  newRoot._objectId = root._objectId
+  newRoot[propNames._STATE] = root[propNames._STATE].set('opSet', opSet)
+  newRoot[propNames._ACTOR_ID] = root[propNames._STATE].get('actorId')
+  newRoot[propNames._OBJECT_ID] = root[propNames._OBJECT_ID]
   return newRoot
 }
 

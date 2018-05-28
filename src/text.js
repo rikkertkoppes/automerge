@@ -1,4 +1,5 @@
 const { SkipList } = require('./skip_list')
+const { propNames } = require('./prop_names')
 
 class Text {
   constructor (opSet, objectId) {
@@ -22,7 +23,7 @@ class Text {
     if (key) return this.elemIds.getValue(key)
   }
 
-  get _objectId () {
+  get [propNames._OBJECT_ID] () {
     return this.objectId
   }
 

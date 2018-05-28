@@ -1,5 +1,6 @@
 const { Map, List, fromJS } = require('immutable')
 const uuid = require('uuid/v4')
+const { propNames } = require('./prop_names')
 const { rootObjectProxy } = require('./proxies')
 const OpSet = require('./op_set')
 const {isObject, checkTarget, makeChange, merge, applyChanges} = require('./auto_api')
@@ -25,7 +26,7 @@ function insertAfter(state, listId, elemId) {
 }
 
 function createNestedObjects(state, value) {
-  if (typeof value._objectId === 'string') return [state, value._objectId]
+  if (typeof value[propNames._OBJECT_ID] === 'string') return [state, value[propNames._OBJECT_ID]]
   const objectId = uuid()
 
   if (value instanceof Text) {
@@ -131,7 +132,7 @@ function parseListIndex(key) {
 
 function change(doc, message, callback) {
   checkTarget('change', doc)
-  if (doc._objectId !== '00000000-0000-0000-0000-000000000000') {
+  if (doc[propNames._OBJECT_ID] !== '00000000-0000-0000-0000-000000000000') {
     throw new TypeError('The first argument to Automerge.change must be the document root')
   }
   if (doc._change && doc._change.mutable) {
@@ -141,7 +142,7 @@ function change(doc, message, callback) {
     [message, callback] = [callback, message]
   }
 
-  const context = {state: doc._state, mutable: true, setField, splice, setListIndex, deleteField}
+  const context = {state: doc[propNames._STATE], mutable: true, setField, splice, setListIndex, deleteField}
   callback(rootObjectProxy(context))
   return makeChange(doc, context.state, message)
 }
@@ -150,12 +151,12 @@ function assign(target, values) {
   checkTarget('assign', target, true)
   if (!isObject(values)) throw new TypeError('The second argument to Automerge.assign must be an ' +
                                              'object, but you passed ' + JSON.stringify(values))
-  let state = target._state
+  let state = target[propNames._STATE]
   for (let key of Object.keys(values)) {
     if (target._type === 'list') {
-      state = setListIndex(state, target._objectId, key, values[key])
+      state = setListIndex(state, target[propNames._OBJECT_ID], key, values[key])
     } else {
-      state = setField(state, target._objectId, key, values[key])
+      state = setField(state, target[propNames._OBJECT_ID], key, values[key])
     }
   }
   target._change.state = state
@@ -171,7 +172,7 @@ function loadImmutable(string, actorId) {
 
 function save(doc) {
   checkTarget('save', doc)
-  return transit.toJSON(doc._state.getIn(['opSet', 'history']))
+  return transit.toJSON(doc[propNames._STATE].getIn(['opSet', 'history']))
 }
 
 function equals(val1, val2) {
@@ -192,14 +193,14 @@ function inspect(doc) {
 
 function getHistory(doc) {
   checkTarget('inspect', doc)
-  const history = doc._state.getIn(['opSet', 'history'])
+  const history = doc[propNames._STATE].getIn(['opSet', 'history'])
   return history.map((change, index) => {
     return {
       get change () {
         return change.toJS()
       },
       get snapshot () {
-        const root = FreezeAPI.init(doc._state.get('actorId'))
+        const root = FreezeAPI.init(doc[propNames._STATE].get('actorId'))
         return FreezeAPI.applyChanges(root, history.slice(0, index + 1), false)
       }
     }
@@ -218,14 +219,14 @@ function lessOrEqual(clock1, clock2) {
 function diff(oldState, newState) {
   checkTarget('diff', oldState)
 
-  const oldClock = oldState._state.getIn(['opSet', 'clock'])
-  const newClock = newState._state.getIn(['opSet', 'clock'])
+  const oldClock = oldState[propNames._STATE].getIn(['opSet', 'clock'])
+  const newClock = newState[propNames._STATE].getIn(['opSet', 'clock'])
   if (!lessOrEqual(oldClock, newClock)) {
     throw new RangeError('Cannot diff two states that have diverged')
   }
 
-  let opSet = oldState._state.get('opSet').set('diff', List())
-  const changes = OpSet.getMissingChanges(newState._state.get('opSet'), oldClock)
+  let opSet = oldState[propNames._STATE].get('opSet').set('diff', List())
+  const changes = OpSet.getMissingChanges(newState[propNames._STATE].get('opSet'), oldClock)
 
   let diffs = [], diff
   for (let change of changes) {
@@ -237,8 +238,8 @@ function diff(oldState, newState) {
 
 function getConflicts(doc, list) {
   checkTarget('getConflicts', doc)
-  const opSet = doc._state.get('opSet')
-  const objectId = list._objectId
+  const opSet = doc[propNames._STATE].get('opSet')
+  const objectId = list[propNames._OBJECT_ID]
   if (!objectId || opSet.getIn(['byObject', objectId, '_init', 'action']) !== 'makeList') {
     throw new TypeError('The second argument to Automerge.getConflicts must be a list object')
   }
@@ -255,13 +256,13 @@ function getConflicts(doc, list) {
 function getChanges(oldState, newState) {
   checkTarget('getChanges', oldState)
 
-  const oldClock = oldState._state.getIn(['opSet', 'clock'])
-  const newClock = newState._state.getIn(['opSet', 'clock'])
+  const oldClock = oldState[propNames._STATE].getIn(['opSet', 'clock'])
+  const newClock = newState[propNames._STATE].getIn(['opSet', 'clock'])
   if (!lessOrEqual(oldClock, newClock)) {
     throw new RangeError('Cannot diff two states that have diverged')
   }
 
-  return OpSet.getMissingChanges(newState._state.get('opSet'), oldClock).toJS()
+  return OpSet.getMissingChanges(newState[propNames._STATE].get('opSet'), oldClock).toJS()
 }
 
 function getChangesForActor(state, actorId) {
@@ -269,12 +270,12 @@ function getChangesForActor(state, actorId) {
 
   // I might want to validate the actorId here
 
-  return OpSet.getChangesForActor(state._state.get('opSet'), actorId).toJS()
+  return OpSet.getChangesForActor(state[propNames._STATE].get('opSet'), actorId).toJS()
 }
 
 function getMissingDeps(doc) {
   checkTarget('getMissingDeps', doc)
-  return OpSet.getMissingDeps(doc._state.get('opSet'))
+  return OpSet.getMissingDeps(doc[propNames._STATE].get('opSet'))
 }
 
 module.exports = {

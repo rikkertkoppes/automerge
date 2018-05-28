@@ -1,4 +1,5 @@
 const assert = require('assert')
+const { propNames } = require('../src/prop_names')
 const Automerge = process.env.TEST_DIST === '1' ? require('../dist/automerge') : require('../src/automerge')
 const { equalsOneOf } = require('./helpers')
 const ROOT_ID = '00000000-0000-0000-0000-000000000000'
@@ -8,17 +9,17 @@ describe('Automerge proxy API', () => {
     it('should have a fixed object ID', () => {
       Automerge.change(Automerge.init(), doc => {
         assert.strictEqual(doc._type, 'map')
-        assert.strictEqual(doc._objectId, ROOT_ID)
-        assert.strictEqual('_objectId' in doc, true)
+        assert.strictEqual(doc[propNames._OBJECT_ID], ROOT_ID)
+        assert.strictEqual(propNames._OBJECT_ID in doc, true)
       })
     })
 
     it('should know its actor ID', () => {
       Automerge.change(Automerge.init(), doc => {
-        assert(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(doc._actorId))
-        assert.notEqual(doc._actorId, ROOT_ID)
-        assert.strictEqual(Automerge.init('customActorId')._actorId, 'customActorId')
-        assert.strictEqual('_actorId' in doc, true)
+        assert(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(doc[propNames._ACTOR_ID]))
+        assert.notEqual(doc[propNames._ACTOR_ID], ROOT_ID)
+        assert.strictEqual(Automerge.init('customActorId')[propNames._ACTOR_ID], 'customActorId')
+        assert.strictEqual(propNames._ACTOR_ID in doc, true)
       })
     })
 
@@ -158,7 +159,7 @@ describe('Automerge proxy API', () => {
 
     it('should support Object.getOwnPropertyNames()', () => {
       Automerge.change(root, doc => {
-        assert.deepEqual(Object.getOwnPropertyNames(doc.list), ['length', '_objectId', '0', '1', '2'])
+        assert.deepEqual(Object.getOwnPropertyNames(doc.list), ['length', propNames._OBJECT_ID, '0', '1', '2'])
       })
     })
 

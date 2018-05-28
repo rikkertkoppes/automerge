@@ -1,6 +1,7 @@
 const assert = require('assert')
 const sinon = require('sinon')
 const Immutable = require('immutable')
+const { propNames } = require('../src/prop_names')
 const Automerge = process.env.TEST_DIST === '1' ? require('../dist/automerge') : require('../src/automerge')
 
 describe('Automerge.initImmutable()', () => {
@@ -37,14 +38,14 @@ describe('Automerge.initImmutable()', () => {
     s1 = Automerge.change(s1, doc => doc.pixels[0] = 'green')
     s2 = Automerge.change(s2, doc => doc.pixels[0] = 'blue')
     s1 = Automerge.merge(s1, s2)
-    if (s1._actorId > s2._actorId) {
+    if (s1[propNames._ACTOR_ID] > s2[propNames._ACTOR_ID]) {
       assert(s1.get('pixels').equals(Immutable.List.of('green')))
       assert(Automerge.getConflicts(s1, s1.get('pixels')).equals(
-        Immutable.List.of(Immutable.Map().set(s2._actorId, 'blue'))))
+        Immutable.List.of(Immutable.Map().set(s2[propNames._ACTOR_ID], 'blue'))))
     } else {
       assert(s1.get('pixels').equals(Immutable.List.of('blue')))
       assert(Automerge.getConflicts(s1, s1.get('pixels')).equals(
-        Immutable.List.of(Immutable.Map().set(s1._actorId, 'green'))))
+        Immutable.List.of(Immutable.Map().set(s1[propNames._ACTOR_ID], 'green'))))
     }
   })
 })

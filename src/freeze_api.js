@@ -1,4 +1,5 @@
 const { Map, List, Set } = require('immutable')
+const { propNames } = require('./prop_names')
 const OpSet = require('./op_set')
 const { Text } = require('./text')
 
@@ -9,10 +10,10 @@ function isObject(obj) {
 function updateMapObject(opSet, diffs) {
   const objectId = diffs[0].obj
   const oldObject = opSet.getIn(['cache', objectId])
-  const conflicts = Object.assign({}, isObject(oldObject) ? oldObject._conflicts : undefined)
+  const conflicts = Object.assign({}, isObject(oldObject) ? oldObject[propNames._CONFLICTS] : undefined)
   const object = Object.assign({}, oldObject)
-  Object.defineProperty(object, '_objectId',  {value: objectId})
-  Object.defineProperty(object, '_conflicts', {value: conflicts})
+  Object.defineProperty(object, propNames._OBJECT_ID,  {value: objectId})
+  Object.defineProperty(object, propNames._CONFLICTS, {value: conflicts})
 
   for (let edit of diffs) {
     if (edit.action === 'create') {
@@ -42,21 +43,21 @@ function updateMapObject(opSet, diffs) {
 
 function parentMapObject(opSet, ref) {
   const oldObject = opSet.getIn(['cache', ref.get('obj')])
-  const conflicts = Object.assign({}, oldObject._conflicts)
+  const conflicts = Object.assign({}, oldObject[propNames._CONFLICTS])
   const object = Object.assign({}, oldObject)
-  Object.defineProperty(object, '_objectId',  {value: oldObject._objectId})
-  Object.defineProperty(object, '_conflicts', {value: conflicts})
+  Object.defineProperty(object, propNames._OBJECT_ID,  {value: oldObject[propNames._OBJECT_ID]})
+  Object.defineProperty(object, propNames._CONFLICTS, {value: conflicts})
   const value = opSet.getIn(['cache', ref.get('value')])
   let changed = false
 
-  if (isObject(object[ref.get('key')]) && object[ref.get('key')]._objectId === ref.get('value')) {
+  if (isObject(object[ref.get('key')]) && object[ref.get('key')][propNames._OBJECT_ID] === ref.get('value')) {
     object[ref.get('key')] = value
     changed = true
   }
   if (isObject(conflicts[ref.get('key')])) {
     for (let actor of Object.keys(conflicts[ref.get('key')])) {
       const conflict = conflicts[ref.get('key')][actor]
-      if (isObject(conflict) && conflict._objectId === ref.get('value')) {
+      if (isObject(conflict) && conflict[propNames._OBJECT_ID] === ref.get('value')) {
         conflicts[ref.get('key')] = Object.assign({}, conflicts[ref.get('key')])
         conflicts[ref.get('key')][actor] = value
         Object.freeze(conflicts[ref.get('key')])
@@ -77,9 +78,9 @@ function updateListObject(opSet, diffs) {
   const objectId = diffs[0].obj
   const oldList = opSet.getIn(['cache', objectId])
   const list = oldList ? oldList.slice() : [] // slice() makes a shallow clone
-  const conflicts = (oldList && oldList._conflicts) ? oldList._conflicts.slice() : []
-  Object.defineProperty(list, '_objectId',  {value: objectId})
-  Object.defineProperty(list, '_conflicts', {value: conflicts})
+  const conflicts = (oldList && oldList[propNames._CONFLICTS]) ? oldList[propNames._CONFLICTS].slice() : []
+  Object.defineProperty(list, propNames._OBJECT_ID,  {value: objectId})
+  Object.defineProperty(list, propNames._CONFLICTS, {value: conflicts})
 
   for (let edit of diffs) {
     const value = edit.link ? opSet.getIn(['cache', edit.value]) : edit.value
@@ -117,19 +118,19 @@ function parentListObject(opSet, ref) {
   let changed = false
   let list = opSet.getIn(['cache', ref.get('obj')])
   const value = opSet.getIn(['cache', ref.get('value')])
-  const conflicts = list._conflicts.slice()
+  const conflicts = list[propNames._CONFLICTS].slice()
   list = list.slice() // shallow clone
-  Object.defineProperty(list, '_objectId',  {value: ref.get('obj')})
-  Object.defineProperty(list, '_conflicts', {value: conflicts})
+  Object.defineProperty(list, propNames._OBJECT_ID,  {value: ref.get('obj')})
+  Object.defineProperty(list, propNames._CONFLICTS, {value: conflicts})
 
-  if (isObject(list[index]) && list[index]._objectId === ref.get('value')) {
+  if (isObject(list[index]) && list[index][propNames._OBJECT_ID] === ref.get('value')) {
     list[index] = value
     changed = true
   }
   if (isObject(conflicts[index])) {
     for (let actor of Object.keys(conflicts[index])) {
       const conflict = conflicts[index][actor]
-      if (isObject(conflict) && conflict._objectId === ref.get('value')) {
+      if (isObject(conflict) && conflict[propNames._OBJECT_ID] === ref.get('value')) {
         conflicts[index] = Object.assign({}, conflicts[index])
         conflicts[index][actor] = value
         Object.freeze(conflicts[index])
@@ -201,16 +202,16 @@ function instantiateImmutable(opSet, objectId) {
   if (isRoot || objType === 'makeMap') {
     obj = {}
     const conflicts = OpSet.getObjectConflicts(opSet, objectId, this).toJS()
-    Object.defineProperty(obj, '_objectId',  {value: objectId})
-    Object.defineProperty(obj, '_conflicts', {value: Object.freeze(conflicts)})
+    Object.defineProperty(obj, propNames._OBJECT_ID,  {value: objectId})
+    Object.defineProperty(obj, propNames._CONFLICTS, {value: Object.freeze(conflicts)})
     for (let field of OpSet.getObjectFields(opSet, objectId)) {
       obj[field] = OpSet.getObjectField(opSet, objectId, field, this)
     }
   } else if (objType === 'makeList') {
     obj = [...OpSet.listIterator(opSet, objectId, 'values', this)]
     const conflicts = List(OpSet.listIterator(opSet, objectId, 'conflicts', this)).toJS()
-    Object.defineProperty(obj, '_objectId',  {value: objectId})
-    Object.defineProperty(obj, '_conflicts', {value: Object.freeze(conflicts)})
+    Object.defineProperty(obj, propNames._OBJECT_ID,  {value: objectId})
+    Object.defineProperty(obj, propNames._CONFLICTS, {value: Object.freeze(conflicts)})
   } else if (objType === 'makeText') {
     obj = new Text(opSet, objectId)
   } else {
@@ -230,8 +231,8 @@ function materialize(opSet) {
 }
 
 function rootObject(state, rootObj) {
-  Object.defineProperty(rootObj, '_state',   {value: state})
-  Object.defineProperty(rootObj, '_actorId', {value: state.get('actorId')})
+  Object.defineProperty(rootObj, propNames._STATE,   {value: state})
+  Object.defineProperty(rootObj, propNames._ACTOR_ID, {value: state.get('actorId')})
   Object.freeze(rootObj)
   return rootObj
 }
@@ -243,7 +244,7 @@ function init(actorId) {
 }
 
 function applyChanges(root, changes, incremental) {
-  let opSet = root._state.get('opSet'), diffs = []
+  let opSet = root[propNames._STATE].get('opSet'), diffs = []
   for (let change of changes) {
     let [newOpSet, diff] = OpSet.addChange(opSet, change)
     diffs.push(...diff)
@@ -256,14 +257,14 @@ function applyChanges(root, changes, incremental) {
     newRoot = opSet.getIn(['cache', OpSet.ROOT_ID])
     if (newRoot === root) {
       newRoot = Object.assign({}, root)
-      Object.defineProperty(newRoot, '_objectId',  {value: root._objectId})
-      Object.defineProperty(newRoot, '_conflicts', {value: root._conflicts})
+      Object.defineProperty(newRoot, propNames._OBJECT_ID,  {value: root[propNames._OBJECT_ID]})
+      Object.defineProperty(newRoot, propNames._CONFLICTS, {value: root[propNames._CONFLICTS]})
       opSet = opSet.setIn(['cache', OpSet.ROOT_ID], newRoot)
     }
   } else {
     ;[opSet, newRoot] = materialize(opSet)
   }
-  return rootObject(root._state.set('opSet', opSet), newRoot)
+  return rootObject(root[propNames._STATE].set('opSet', opSet), newRoot)
 }
 
 module.exports = {
