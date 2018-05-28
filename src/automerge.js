@@ -135,7 +135,7 @@ function change(doc, message, callback) {
   if (doc[propNames._OBJECT_ID] !== '00000000-0000-0000-0000-000000000000') {
     throw new TypeError('The first argument to Automerge.change must be the document root')
   }
-  if (doc._change && doc._change.mutable) {
+  if (doc[propNames._CHANGE] && doc[propNames._CHANGE].mutable) {
     throw new TypeError('Calls to Automerge.change cannot be nested')
   }
   if (typeof message === 'function' && callback === undefined) {
@@ -153,13 +153,13 @@ function assign(target, values) {
                                              'object, but you passed ' + JSON.stringify(values))
   let state = target[propNames._STATE]
   for (let key of Object.keys(values)) {
-    if (target._type === 'list') {
+    if (target[propNames._TYPE] === 'list') {
       state = setListIndex(state, target[propNames._OBJECT_ID], key, values[key])
     } else {
       state = setField(state, target[propNames._OBJECT_ID], key, values[key])
     }
   }
-  target._change.state = state
+  target[propNames._CHANGE].state = state
 }
 
 function load(string, actorId) {

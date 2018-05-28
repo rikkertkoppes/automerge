@@ -8,7 +8,7 @@ describe('Automerge proxy API', () => {
   describe('root object', () => {
     it('should have a fixed object ID', () => {
       Automerge.change(Automerge.init(), doc => {
-        assert.strictEqual(doc._type, 'map')
+        assert.strictEqual(doc[propNames._TYPE], 'map')
         assert.strictEqual(doc[propNames._OBJECT_ID], ROOT_ID)
         assert.strictEqual(propNames._OBJECT_ID in doc, true)
       })
@@ -87,13 +87,13 @@ describe('Automerge proxy API', () => {
 
     it('should allow inspection as regular JS objects', () => {
       Automerge.change(Automerge.init(), doc => {
-        assert.deepEqual(doc._inspect, {})
+        assert.deepEqual(doc[propNames._INSPECT], {})
         assert.deepEqual(Automerge.inspect(doc), {})
         doc.key1 = 'value1'
-        assert.deepEqual(doc._inspect, {key1: 'value1'})
+        assert.deepEqual(doc[propNames._INSPECT], {key1: 'value1'})
         assert.deepEqual(Automerge.inspect(doc), {key1: 'value1'})
         doc.key2 = 'value2'
-        assert.deepEqual(doc._inspect, {
+        assert.deepEqual(doc[propNames._INSPECT], {
           key1: 'value1', key2: 'value2'
         })
         assert.deepEqual(Automerge.inspect(doc), {
@@ -180,7 +180,7 @@ describe('Automerge proxy API', () => {
 
     it('should allow inspection as regular JS objects', () => {
       Automerge.change(root, doc => {
-        assert.deepEqual(doc._inspect, {
+        assert.deepEqual(doc[propNames._INSPECT], {
           list: [1, 2, 3], empty: []
         })
         assert.deepEqual(Automerge.inspect(doc), {

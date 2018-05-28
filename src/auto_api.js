@@ -19,7 +19,7 @@ function checkTarget(funcName, target, needMutable) {
     throw new TypeError('The first argument to Automerge.' + funcName +
                         ' must be the object to modify, but you passed ' + JSON.stringify(target))
   }
-  if (needMutable && (!target._change || !target._change.mutable)) {
+  if (needMutable && (!target[propNames._CHANGE] || !target[propNames._CHANGE].mutable)) {
     throw new TypeError('Automerge.' + funcName + ' requires a writable object as first argument, ' +
                         'but the one you passed is read-only. Please use Automerge.change() ' +
                         'to get a writable version.')
