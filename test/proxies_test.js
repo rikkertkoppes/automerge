@@ -159,7 +159,13 @@ describe('Automerge proxy API', () => {
 
     it('should support Object.getOwnPropertyNames()', () => {
       Automerge.change(root, doc => {
-        assert.deepEqual(Object.getOwnPropertyNames(doc.list), ['length', propNames._OBJECT_ID, '0', '1', '2'])
+        if (typeof Symbol !== 'undefined') {
+          //if symbols are used, _objectId will not show up in getOwnPropertyNames, but in getOwnPropertySymbols
+          assert.deepEqual(Object.getOwnPropertyNames(doc.list), ['length', '0', '1', '2'])
+          assert.deepEqual(Object.getOwnPropertySymbols(doc.list), [propNames._OBJECT_ID])
+        } else {
+          assert.deepEqual(Object.getOwnPropertyNames(doc.list), ['length', propNames._OBJECT_ID, '0', '1', '2'])
+        }
       })
     })
 
